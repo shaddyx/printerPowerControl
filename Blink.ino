@@ -35,6 +35,7 @@ int state = STATE_OFF;
 int led_state = 0;
 int led_timer = 0;
 int force_off_timer = 0;
+
 void debug(String s) {
 	if (debug) {
 		Serial.println(s);
@@ -133,7 +134,7 @@ void loop() {
 		timer = 0;
 	}
 
-	if (led_timer) {
+	if (timer) {
 		debug("Timer is:" + String(timer));
 	}
 
