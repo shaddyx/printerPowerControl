@@ -35,6 +35,7 @@ int state = STATE_OFF;
 int led_state = 0;
 int led_timer = 0;
 int force_off_timer = 0;
+int enable_off = 0;
 
 void debug(String s) {
 	if (debug) {
