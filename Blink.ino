@@ -14,21 +14,9 @@
  */
 #include <Arduino.h>
 #include "states.h"
-#define DEBUG 0
-#define ON_BUTTON_PIN 2
-#define CANCEL_BUTTON_PIN 3
-#define LED_PIN 4
-#define TURN_ON_PIN 10
-#define HOME_PIN 5
-#define OFF_DISABLED 10000000
-
-#define TIME_MULTIPLIER 100
-#define TIME_TO_WAIT_HOME 15 * 60
-//#define TIME_TO_WAIT_HOME 1 * 60
-#define TIME_TO_OFF 30
-#define TIME_LED 2
-#define TIME_TO_FORCE 4
-
+#include "settings.h"
+#include "buttons.h"
+#include "tools.h"
 long timer = 0;
 
 int state = STATE_OFF;
@@ -37,20 +25,6 @@ int led_timer = 0;
 int force_off_timer = 0;
 int enable_off = 0;
 
-void debug(String s) {
-	if (debug) {
-		Serial.println(s);
-	}
-}
-int homePosition() {
-	return !digitalRead(HOME_PIN);
-}
-int onButtonPressed() {
-	return !digitalRead(ON_BUTTON_PIN);
-}
-int offButtonPressed() {
-	return !digitalRead(CANCEL_BUTTON_PIN);
-}
 
 void updateState() {
 	int onState = 0;
