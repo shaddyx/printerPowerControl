@@ -52,11 +52,13 @@ void setup() {
 void turnOn(){
 	state = STATE_ON;
 	blink_counter = 0;
+	debug("Turning on");
 }
 
 void turnOff(){
 	state = STATE_OFF;
 	blink_counter = 0;
+	debug("Turning off");
 }
 
 void gracefullOff(){

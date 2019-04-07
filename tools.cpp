@@ -2,7 +2,7 @@
 #include "settings.h"
 
 void debug(String s) {
-	if (debug) {
+	if (DEBUG) {
 		Serial.println(s);
 	}
 }
