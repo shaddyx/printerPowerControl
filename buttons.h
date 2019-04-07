@@ -11,7 +11,12 @@
 int homePosition();
 int onButtonPressed();
 int offButtonPressed();
+void pollButtons();
 
+unsigned long getHomeHold();
+unsigned long getonHold();
+unsigned long getOffHold();
+unsigned long getOutOfHomeHold();
 
 
 #endif /* BUTTONS_H_ */

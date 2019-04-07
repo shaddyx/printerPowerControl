@@ -12,30 +12,22 @@
  modified 8 May 2014
  by Scott Fitzgerald
  */
+
 #include <Arduino.h>
 #include "states.h"
 #include "settings.h"
 #include "buttons.h"
 #include "tools.h"
-long timer = 0;
+#include "timer.h"
 
-int state = STATE_OFF;
-int led_state = 0;
-int led_timer = 0;
-int force_off_timer = 0;
-int enable_off = 0;
+byte state = STATE_OFF;
+bool enabled = 0;
+bool blink_state = 0;
+int blink_counter = 0;
 
-
-void updateState() {
-	int onState = 0;
-	if (state == STATE_ON || state == STATE_TURNING_OFF) {
-		onState = 1;
-	}
-
-	digitalWrite(TURN_ON_PIN, !onState);
-	digitalWrite(LED_PIN, led_state);
-	debug("ledState: " + String(led_state));
-}
+unsigned long blink_interval = 0;
+unsigned long off_timer = 0;
+unsigned long blink_timer = 0;
 
 // the setup function runs once when you press reset or power the board
 void setup() {
@@ -44,6 +36,7 @@ void setup() {
 		Serial.begin(115200);
 		Serial.println("Started");
 	}
+
 	pinMode(LED_PIN, OUTPUT);
 	pinMode(TURN_ON_PIN, OUTPUT);
 	pinMode(ON_BUTTON_PIN, INPUT);
@@ -53,106 +46,93 @@ void setup() {
 	digitalWrite(HOME_PIN, HIGH);
 	digitalWrite(ON_BUTTON_PIN, HIGH);
 	digitalWrite(CANCEL_BUTTON_PIN, HIGH);
+	initTimer();
 }
 
-void turnOn() {
+void turnOn(){
 	state = STATE_ON;
-	timer = TIME_TO_WAIT_HOME * TIME_MULTIPLIER;
+	blink_counter = 0;
 }
 
-void turnOff() {
+void turnOff(){
 	state = STATE_OFF;
+	blink_counter = 0;
 }
 
-void startTurningOff() {
-	state = STATE_TURNING_OFF;
-	timer = TIME_TO_OFF * TIME_MULTIPLIER;
+void gracefullOff(){
+	off_timer = setTimer(TIME_TO_OFF);
+	blink_counter = GRACEFUL_OFF_BLINK_COUNTER;
+	blink_interval = GRACEFU_OFF_BLINK_INTERVAL
 }
 
-void resetTimerStateOn() {
-	timer = TIME_TO_WAIT_HOME * TIME_MULTIPLIER;
-}
-void resetLedTimer() {
-	led_timer = TIME_LED * TIME_MULTIPLIER;
-}
+void updateLed(){
+	int ledState = 0;
+	if (state == STATE_OFF){
+		blink_interval = 0;
+	}
 
-void updateLed() {
-	if (state == STATE_ON) {
-		if (homePosition()) {
-			led_timer -= 1;
-		} else {
-			resetLedTimer();
-			led_state = 1;
+	if (blink_interval && blink_counter){
+		if (checkTimer(&blink_timer)){
+			blink_state = !blink_state;
 		}
-	}
 
-	if (state == STATE_TURNING_OFF) {
-		led_timer -= 3;
+		if (!blink_timer){
+			blink_timer = setTimer(blink_interval);
+			blink_counter --;
+		}
+		ledState = blink_state;
+	} else if (state == STATE_ON){
+		ledState = 1;
 	}
+	digitalWrite(LED_PIN, ledState);
+}
 
-	if (state == STATE_OFF) {
-		resetLedTimer();
-		led_state = 0;
+void checkOff(){
+	if (checkTimer(&off_timer)){
+		turnOff();
 	}
+}
 
-	if (led_timer <= 0) {
-		resetLedTimer();
-		led_state = !led_state;
-	}
+void updatePower(){
+	int onState = state != STATE_OFF;
+	digitalWrite(TURN_ON_PIN, !onState);
 }
 
 // the loop function runs over and over again forever
 void loop() {
-	timer--;
-
-	if (timer <= 0) {
-		timer = 0;
-	}
-
-	if (timer) {
-		debug("Timer is:" + String(timer));
-	}
-
-	if (!homePosition() && state == STATE_ON) {
-		resetTimerStateOn();
-	}
-
-	if (onButtonPressed()) {
-		if (state == STATE_OFF || state == STATE_TURNING_OFF) {
-			debug("Turning on");
+	if (onButtonPressed()){
+		if (state == STATE_OFF){
 			turnOn();
 		}
-	}
-
-	if (offButtonPressed()) {
-		if (state == STATE_ON) {
-			debug("Starting turn off");
-			startTurningOff();
-		}
-		if (state == STATE_ON || state == STATE_TURNING_OFF) {
-			force_off_timer++;
-		} else {
-			force_off_timer = 0;
+		if (off_timer){
+			off_timer = getTime();
 		}
 	}
 
-	if (force_off_timer >= TIME_TO_FORCE * TIME_MULTIPLIER
-			&& (state == STATE_TURNING_OFF || state == STATE_ON)) {
-		turnOff();
-		force_off_timer = 0;
+	if (getOutOfHomeHold() >= TIME_TO_ENABLE){
+		enabled = 1;
+		blink_counter = ENABLE_BLINK_COUNTER;
+		blink_interval = ENABLE_BLINK_INTERVAL
 	}
-	if (timer == 0 && state == STATE_TURNING_OFF) {
-		debug("Turning off");
+
+	if (getOffHold() >= TIME_TO_FORCE){
 		turnOff();
 	}
 
-	if (timer == 0 && state == STATE_ON) {
-		debug("Starting turn off by timer");
-		startTurningOff();
+	if (offButtonPressed()){
+		blink_counter = TURNING_OFF_BLINK_COUNTER;
+		blink_interval = TURNING_OFF_BLINK_INTERVAL
+		gracefullOff();
+	}
+
+	if (enabled && getHomeHold() >= TIME_TO_WAIT_HOME){
+		gracefullOff();
 	}
 
 	updateLed();
-	updateState();
-	delay(10);
-
+	pollTimer();
+	pollButtons();
+	checkOff();
+	updatePower();
+	delay(1);
 }
