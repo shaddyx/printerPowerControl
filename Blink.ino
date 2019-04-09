@@ -23,7 +23,7 @@
 #define OFF_DISABLED 10000000
 
 #define TIME_MULTIPLIER 100
-#define TIME_TO_WAIT_HOME 15 * 60
+#define TIME_TO_WAIT_HOME 25 * 60
 //#define TIME_TO_WAIT_HOME 1 * 60
 #define TIME_TO_OFF 30
 #define TIME_LED 2
