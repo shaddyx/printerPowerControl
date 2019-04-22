@@ -4,87 +4,38 @@
  *  Created on: Feb 26, 2014
  *      Author: shaddy
  */
-#include <avr/io.h>
-#include <avr/interrupt.h>
+#include <Arduino.h>
 #include "timer.h"
 #include "util.h"
+#define maxVal 4294967295
 
-#ifdef TCCR1B
-#define TIMER_CONF TCCR1B
-#define TIMER_COUNTER TCNT1
-#else
-#define TIMER_CONF TCCR0B
-#define TIMER_COUNTER TCNT0
-#endif
-#define TIMER_MODE_BIT	16
-#if defined(__AVR_ATtiny13__) || defined(__AVR_ATtiny13A__)
-	#define TIMER_MODE_BIT	8
-#endif
-
-#if F_CPU == 16000000
-	#define TIMER_DIVIDER 256
-	#define TIMER_QUANTUM 4
-	#define IMPULSES_PER_QUANTUM 125
-#elif F_CPU == 8000000
-	#define TIMER_DIVIDER 256
-	#define TIMER_QUANTUM 4
-	#define IMPULSES_PER_QUANTUM 125
-#elif F_CPU == 4000000
-	#define TIMER_DIVIDER 64
-#elif F_CPU == 1000000
-	#define TIMER_DIVIDER 64
-#endif
-#define IMPULSES_PER_QUANTUM 125
-
-#if TIMER_DIVIDER == 64
-#define TIMER_CONF_BITS (0<<CS02)|(1<<CS01)|(1<<CS00)
-#elif TIMER_DIVIDER == 256
-#define TIMER_CONF_BITS (1<<CS02)|(0<<CS01)|(0<<CS00)
-#elif TIMER_DIVIDER == 1024
-#define TIMER_CONF_BITS (1<<CS02)|(0<<CS01)|(1<<CS00)
-#endif
-
-#define IMPULSES_PER_MS (F_CPU / TIMER_DIVIDER) / 1000
-
-unsigned long counter = 0;
-unsigned int lastValue = 0;
+int64_t counter = 0;
+int64_t lastValue = 0;
 char timerNotStarted = 1;
 
+
 void initTimer() {
-	if (timerNotStarted){
-		TIMER_CONF = TIMER_CONF_BITS;
-		TIMER_COUNTER = 0;
-		timerNotStarted = 0;
-	}
 }
 
 void pollTimer(){
-	if (timerNotStarted){
-		return;
-	}
-	unsigned int curValue = TIMER_COUNTER;
+	unsigned int curValue = millis();
 	unsigned int delta;
 	if (curValue >= lastValue) {
 		delta = curValue - lastValue;
 	} else {
-#if TIMER_MODE_BIT == 16
-		delta = curValue + (65535 - lastValue);
-#else
-		delta = curValue + (255 - lastValue);
-#endif
+		delta = millis() + (maxVal - lastValue);
 	}
-
-	if (delta > IMPULSES_PER_QUANTUM) {
-		counter += delta / IMPULSES_PER_QUANTUM;
-		lastValue = curValue - delta % IMPULSES_PER_QUANTUM;
-	}
+	lastValue = curValue;
+	counter += delta;
 }
 
-unsigned long getTime() {
+int64_t getTime() {
+	pollTimer();
 	return counter;
 }
 
-char checkTimer(unsigned long* timer) {
+char checkTimer(int64_t* timer) {
+	pollTimer();
 	if (*timer != 0 && *timer <= counter) {
 		*timer = 0;
 		return 1;
@@ -92,7 +43,7 @@ char checkTimer(unsigned long* timer) {
 	return 0;
 }
 
-unsigned long setTimer(unsigned long ms){
-	initTimer();
-	return counter + ms /TIMER_QUANTUM;
+int64_t setTimer(int64_t ms){
+	pollTimer();
+	return counter + ms;
 }

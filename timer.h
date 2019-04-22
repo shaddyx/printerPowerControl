@@ -8,9 +8,9 @@
 #ifndef TIMER_H_
 #define TIMER_H_
 
-unsigned long setTimer(unsigned long ms);
-char checkTimer(unsigned long* timer);
-unsigned long getTime();
+int64_t setTimer(int64_t ms);
+char checkTimer(int64_t* timer);
+int64_t getTime();
 void pollTimer();
 void initTimer();
 

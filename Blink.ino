@@ -25,9 +25,10 @@ bool enabled = 0;
 bool blink_state = 0;
 int blink_counter = 0;
 
-unsigned long blink_interval = 0;
-unsigned long off_timer = 0;
-unsigned long blink_timer = 0;
+int64_t blink_interval = 0;
+int64_t off_timer = 0;
+int64_t blink_timer = 0;
+int64_t test_timer = 0;
 
 // the setup function runs once when you press reset or power the board
 void setup() {
@@ -41,12 +42,15 @@ void setup() {
 	pinMode(TURN_ON_PIN, OUTPUT);
 	pinMode(ON_BUTTON_PIN, INPUT);
 	pinMode(HOME_PIN, INPUT);
+	pinMode(13, OUTPUT);
 	pinMode(CANCEL_BUTTON_PIN, INPUT);
 	digitalWrite(TURN_ON_PIN, HIGH);
 	digitalWrite(HOME_PIN, HIGH);
 	digitalWrite(ON_BUTTON_PIN, HIGH);
 	digitalWrite(CANCEL_BUTTON_PIN, HIGH);
 	initTimer();
+
+	test_timer = setTimer(1000);
 }
 
 void turnOn(){
@@ -101,7 +105,14 @@ void updatePower(){
 }
 
 // the loop function runs over and over again forever
+char test_state = 0;
 void loop() {
+	if (checkTimer(&test_timer)){
+		test_timer = setTimer(1000);
+		test_state = !test_state;
+		digitalWrite(13, test_state);
+
+	}
 	if (onButtonPressed()){
 		if (state == STATE_OFF){
 			turnOn();

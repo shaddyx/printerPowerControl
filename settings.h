@@ -12,7 +12,7 @@
 #define ON_BUTTON_PIN 2
 #define CANCEL_BUTTON_PIN 3
 #define LED_PIN 4
-#define LED_PIN 13
+//#define LED_PIN 13
 #define TURN_ON_PIN 10
 #define HOME_PIN 5
 
