@@ -16,20 +16,14 @@
 #include <PMButton.h>
 #include <TimerEvent.h>
 #include "states.h"
-#define DEBUG 0
+#define DEBUG 1
 #define ON_BUTTON_PIN 2
 #define CANCEL_BUTTON_PIN 3
 #define LED_PIN 4
 #define TURN_ON_PIN 10
 #define SENSOR_PIN 5
-#define OFF_DISABLED 10000000
-
-#define TIME_MULTIPLIER 100
-#define TIME_TO_WAIT_HOME 25 * 60
 //#define TIME_TO_WAIT_HOME 1 * 60
-#define TIME_TO_OFF 30000
-#define TIME_LED 2
-#define TIME_TO_FORCE 4
+#define TIME_TO_OFF 10000
 
 long timer = 0;
 
@@ -44,6 +38,7 @@ PMButton cancelButton(CANCEL_BUTTON_PIN);
 
 TimerEvent offTimer;
 TimerEvent blinkTimer;
+TimerEvent stateTimer;
 
 
 void debug(String s) {
@@ -60,10 +55,8 @@ void updateState() {
 	if (state == STATE_ON || state == STATE_TURNING_OFF) {
 		onState = 1;
 	}
-
 	digitalWrite(TURN_ON_PIN, !onState);
 	digitalWrite(LED_PIN, led_state);
-	debug("ledState: " + String(led_state));
 }
 
 // the setup function runs once when you press reset or power the board
@@ -75,17 +68,22 @@ void setup() {
 	}
 	pinMode(LED_PIN, OUTPUT);
 	pinMode(TURN_ON_PIN, OUTPUT);
-	pinMode(ON_BUTTON_PIN, INPUT);
 	pinMode(SENSOR_PIN, INPUT);
-	pinMode(CANCEL_BUTTON_PIN, INPUT);
 	digitalWrite(TURN_ON_PIN, HIGH);
 	digitalWrite(SENSOR_PIN, HIGH);
-	digitalWrite(ON_BUTTON_PIN, HIGH);
-	digitalWrite(CANCEL_BUTTON_PIN, HIGH);
 	blinkTimer.set(1000, blinker);
 	offTimer.set(TIME_TO_OFF, turnOff);
+	stateTimer.set(1000, showState);
+	stateTimer.enable();
 	blinkTimer.disable();
 	offTimer.disable();
+	onButton.begin();
+	cancelButton.begin();
+}
+
+void showState(){
+	debug("ledState: " + String(led_state));
+	debug("state:" + String(state));
 }
 
 void blinker(){
@@ -107,34 +105,45 @@ void startTurningOff(){
 }
 
 void updateLed(){
-	if (state = STATE_TURNING_OFF){
+	if (state == STATE_ON){
+		led_state = 1;
+	}
+	if (state == STATE_OFF){
+			led_state = 0;
+		}
+	if (state == STATE_TURNING_OFF){
 		blinkTimer.enable();
 	} else {
 		blinkTimer.disable();
+		blinkTimer.reset();
 	}
 }
-
-
 
 void loop() {
 	if (onButton.clicked()){
 		turnOn();
 	}
 
-	if (cancelButton.clicked() || canTurnOff()){
+	if (state == STATE_ON && canTurnOff()){
 		startTurningOff();
 	}
 
-	if (cancelButton.heldLong()){
+	if (state == STATE_TURNING_OFF && !canTurnOff()){
+		turnOn();
+	}
+
+	if (cancelButton.clicked()){
 		turnOff();
 	}
 
 	if (state == STATE_OFF || state == STATE_ON){
 		offTimer.disable();
 	}
-
 	offTimer.update();
 	blinkTimer.update();
+	stateTimer.update();
 	updateLed();
 	updateState();
+	onButton.checkSwitch();
+	cancelButton.checkSwitch();
 }
