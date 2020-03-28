@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>3dPrinterPowerFirmware</name>
+	<name>printerPowerControl</name>
 	<comment></comment>
 	<projects>
 	</projects>
@@ -34,12 +34,22 @@
 		<link>
 			<name>core/core</name>
 			<type>2</type>
-			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/arduino/hardware/avr/1.6.23/cores/arduino</locationURI>
+			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/arduino/hardware/avr/1.8.2/cores/arduino</locationURI>
 		</link>
 		<link>
 			<name>core/variant</name>
 			<type>2</type>
-			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/arduino/hardware/avr/1.6.23/variants/eightanaloginputs</locationURI>
+			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/arduino/hardware/avr/1.8.2/variants/eightanaloginputs</locationURI>
+		</link>
+		<link>
+			<name>libraries/Polymorphic_Buttons</name>
+			<type>2</type>
+			<locationURI>ECLIPSE_HOME/arduinoPlugin/libraries/Polymorphic_Buttons/1.0.3</locationURI>
+		</link>
+		<link>
+			<name>libraries/TimerEvent</name>
+			<type>2</type>
+			<locationURI>ECLIPSE_HOME/arduinoPlugin/libraries/TimerEvent/0.4.2</locationURI>
 		</link>
 	</linkedResources>
 </projectDescription>

@@ -13,19 +13,21 @@
  by Scott Fitzgerald
  */
 #include <Arduino.h>
+#include <PMButton.h>
+#include <TimerEvent.h>
 #include "states.h"
 #define DEBUG 0
 #define ON_BUTTON_PIN 2
 #define CANCEL_BUTTON_PIN 3
 #define LED_PIN 4
 #define TURN_ON_PIN 10
-#define HOME_PIN 5
+#define SENSOR_PIN 5
 #define OFF_DISABLED 10000000
 
 #define TIME_MULTIPLIER 100
 #define TIME_TO_WAIT_HOME 25 * 60
 //#define TIME_TO_WAIT_HOME 1 * 60
-#define TIME_TO_OFF 30
+#define TIME_TO_OFF 30000
 #define TIME_LED 2
 #define TIME_TO_FORCE 4
 
@@ -37,19 +39,20 @@ int led_timer = 0;
 int force_off_timer = 0;
 int enable_off = 0;
 
+PMButton onButton(ON_BUTTON_PIN);
+PMButton cancelButton(CANCEL_BUTTON_PIN);
+
+TimerEvent offTimer;
+TimerEvent blinkTimer;
+
+
 void debug(String s) {
 	if (debug) {
 		Serial.println(s);
 	}
 }
-int homePosition() {
-	return !digitalRead(HOME_PIN);
-}
-int onButtonPressed() {
-	return !digitalRead(ON_BUTTON_PIN);
-}
-int offButtonPressed() {
-	return !digitalRead(CANCEL_BUTTON_PIN);
+int canTurnOff() {
+	return digitalRead(SENSOR_PIN);
 }
 
 void updateState() {
@@ -73,112 +76,65 @@ void setup() {
 	pinMode(LED_PIN, OUTPUT);
 	pinMode(TURN_ON_PIN, OUTPUT);
 	pinMode(ON_BUTTON_PIN, INPUT);
-	pinMode(HOME_PIN, INPUT);
+	pinMode(SENSOR_PIN, INPUT);
 	pinMode(CANCEL_BUTTON_PIN, INPUT);
 	digitalWrite(TURN_ON_PIN, HIGH);
-	digitalWrite(HOME_PIN, HIGH);
+	digitalWrite(SENSOR_PIN, HIGH);
 	digitalWrite(ON_BUTTON_PIN, HIGH);
 	digitalWrite(CANCEL_BUTTON_PIN, HIGH);
+	blinkTimer.set(1000, blinker);
+	offTimer.set(TIME_TO_OFF, turnOff);
+	blinkTimer.disable();
+	offTimer.disable();
 }
 
-void turnOn() {
-	state = STATE_ON;
-	timer = TIME_TO_WAIT_HOME * TIME_MULTIPLIER;
+void blinker(){
+	led_state = !led_state;
 }
 
-void turnOff() {
+void turnOff(){
 	state = STATE_OFF;
 }
 
-void startTurningOff() {
+void turnOn(){
+	state = STATE_ON;
+}
+
+void startTurningOff(){
 	state = STATE_TURNING_OFF;
-	timer = TIME_TO_OFF * TIME_MULTIPLIER;
+	offTimer.reset();
+	offTimer.enable();
 }
 
-void resetTimerStateOn() {
-	timer = TIME_TO_WAIT_HOME * TIME_MULTIPLIER;
-}
-void resetLedTimer() {
-	led_timer = TIME_LED * TIME_MULTIPLIER;
-}
-
-void updateLed() {
-	if (state == STATE_ON) {
-		if (homePosition()) {
-			led_timer -= 1;
-		} else {
-			resetLedTimer();
-			led_state = 1;
-		}
-	}
-
-	if (state == STATE_TURNING_OFF) {
-		led_timer -= 3;
-	}
-
-	if (state == STATE_OFF) {
-		resetLedTimer();
-		led_state = 0;
-	}
-
-	if (led_timer <= 0) {
-		resetLedTimer();
-		led_state = !led_state;
+void updateLed(){
+	if (state = STATE_TURNING_OFF){
+		blinkTimer.enable();
+	} else {
+		blinkTimer.disable();
 	}
 }
 
-// the loop function runs over and over again forever
+
+
 void loop() {
-	timer--;
-
-	if (timer <= 0) {
-		timer = 0;
+	if (onButton.clicked()){
+		turnOn();
 	}
 
-	if (timer) {
-		debug("Timer is:" + String(timer));
-	}
-
-	if (!homePosition() && state == STATE_ON) {
-		resetTimerStateOn();
-	}
-
-	if (onButtonPressed()) {
-		if (state == STATE_OFF || state == STATE_TURNING_OFF) {
-			debug("Turning on");
-			turnOn();
-		}
-	}
-
-	if (offButtonPressed()) {
-		if (state == STATE_ON) {
-			debug("Starting turn off");
-			startTurningOff();
-		}
-		if (state == STATE_ON || state == STATE_TURNING_OFF) {
-			force_off_timer++;
-		} else {
-			force_off_timer = 0;
-		}
-	}
-
-	if (force_off_timer >= TIME_TO_FORCE * TIME_MULTIPLIER
-			&& (state == STATE_TURNING_OFF || state == STATE_ON)) {
-		turnOff();
-		force_off_timer = 0;
-	}
-	if (timer == 0 && state == STATE_TURNING_OFF) {
-		debug("Turning off");
-		turnOff();
-	}
-
-	if (timer == 0 && state == STATE_ON) {
-		debug("Starting turn off by timer");
+	if (cancelButton.clicked() || canTurnOff()){
 		startTurningOff();
 	}
 
+	if (cancelButton.heldLong()){
+		turnOff();
+	}
+
+	if (state == STATE_OFF || state == STATE_ON){
+		offTimer.disable();
+	}
+
+	offTimer.update();
+	blinkTimer.update();
 	updateLed();
 	updateState();
-	delay(10);
-
 }

@@ -1,2 +1,6 @@
-Release
+#=========ADDED_AUTOMATICALLY=============
+.idea
+.eclipse
+.config
 .settings
+Release
